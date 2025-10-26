@@ -4,8 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kişisel Bütçe Takipçisi</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha512-oHDEc8Xed5Oej2vkk4bDq8e6JHcaT+lW8CL68GZB6U6Y9G9G7mIMK9VnM8DhzXHY0Pxzjz7Y1W8S5w5yXQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"
+        integrity="sha512-oHDEc8Xed5Oej2vkk4bDq8e6JHcaT+lW8CL68GZB6U6Y9G9G7mIMK9VnM8DhzXHY0Pxzjz7Y1W8S5w5yXQ=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
+    />
     <style>
         :root {
             --bg: #f6f8fa;
@@ -42,9 +47,27 @@
             margin: 0;
         }
 
+        .user-panel {
+            margin-top: 1.25rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .user-panel span {
+            font-weight: 600;
+        }
+
         main {
             max-width: 960px;
             margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        #app {
             display: grid;
             grid-template-columns: 1fr;
             gap: 1.5rem;
@@ -99,6 +122,18 @@
 
         button[type="submit"]:hover {
             background: var(--accent-dark);
+        }
+
+        button.secondary {
+            background: rgba(99, 102, 241, 0.08);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        button.secondary:hover {
+            background: rgba(99, 102, 241, 0.16);
         }
 
         .feedback {
@@ -190,6 +225,34 @@
             background: rgba(225, 29, 72, 0.2);
         }
 
+        .auth-tabs {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .auth-tabs button {
+            flex: 1;
+            margin: 0;
+            padding: 0.65rem;
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid transparent;
+            color: var(--accent);
+            cursor: pointer;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .auth-tabs button.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            font-weight: 600;
+        }
+
+        #auth-form {
+            grid-template-columns: 1fr;
+        }
+
         @media (max-width: 720px) {
             body {
                 padding: 1.25rem;
@@ -198,211 +261,564 @@
             form {
                 grid-template-columns: 1fr;
             }
+
+            .auth-tabs {
+                flex-direction: column;
+            }
         }
     </style>
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
 </head>
 <body>
     <header>
         <h1>Kişisel Bütçe Takipçisi</h1>
         <p>Gelir ve giderlerinizi tek sayfada takip edin, finansal hedeflerinize ulaşın.</p>
+        <div class="user-panel" id="user-panel" hidden>
+            <span id="current-username"></span>
+            <button id="logout-btn" class="secondary">Çıkış Yap</button>
+        </div>
     </header>
 
     <main>
-        <section class="card">
-            <h2>Yeni İşlem Ekle</h2>
-            <form id="transaction-form" py-submit="add_transaction">
-                <label>
-                    Açıklama
-                    <input type="text" id="description" placeholder="Örn. Maaş, Market alışverişi" required />
-                </label>
-                <label>
-                    Tutar (₺)
-                    <input type="number" id="amount" step="0.01" min="0" placeholder="0.00" required />
-                </label>
-                <label>
-                    Tür
-                    <select id="transaction-type">
-                        <option value="income">Gelir</option>
-                        <option value="expense">Gider</option>
-                    </select>
-                </label>
-                <label>
-                    Kategori
-                    <select id="category">
-                        <option value="Maaş">Maaş</option>
-                        <option value="Yemek">Yemek</option>
-                        <option value="Ulaşım">Ulaşım</option>
-                        <option value="Kira">Kira</option>
-                        <option value="Eğlence">Eğlence</option>
-                        <option value="Diğer">Diğer</option>
-                    </select>
-                </label>
-                <label>
-                    Tarih
-                    <input type="date" id="date" />
-                </label>
-                <div style="display:flex; align-items:flex-end;">
-                    <button type="submit" style="width:100%;">Kaydet</button>
-                </div>
-            </form>
-            <div id="feedback" class="feedback" aria-live="polite"></div>
-        </section>
-
-        <section class="card">
-            <h2>Özet</h2>
-            <div class="summary">
-                <article class="summary-card">
-                    <h3>Toplam Gelir</h3>
-                    <p id="total-income">₺0.00</p>
-                </article>
-                <article class="summary-card">
-                    <h3>Toplam Gider</h3>
-                    <p id="total-expense">₺0.00</p>
-                </article>
-                <article class="summary-card">
-                    <h3>Kalan Bakiye</h3>
-                    <p id="balance">₺0.00</p>
-                </article>
+        <section class="card" id="auth-card">
+            <h2 id="auth-title">Kullanıcı Girişi</h2>
+            <div class="auth-tabs">
+                <button type="button" data-mode="login" class="active">Giriş Yap</button>
+                <button type="button" data-mode="register">Kayıt Ol</button>
             </div>
+            <form id="auth-form">
+                <label>
+                    Kullanıcı Adı
+                    <input type="text" id="auth-username" placeholder="Örn. ayse" autocomplete="username" required />
+                </label>
+                <label>
+                    Şifre
+                    <input type="password" id="auth-password" placeholder="••••••" autocomplete="current-password" required />
+                </label>
+                <button type="submit" id="auth-submit">Giriş Yap</button>
+            </form>
+            <div id="auth-feedback" class="feedback" aria-live="polite"></div>
         </section>
 
-        <section class="card">
-            <h2>İşlem Geçmişi</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Tarih</th>
-                        <th>Açıklama</th>
-                        <th>Kategori</th>
-                        <th>Tutar</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="transactions-body"></tbody>
-            </table>
-        </section>
+        <div id="app" hidden>
+            <section class="card">
+                <h2>Yeni İşlem Ekle</h2>
+                <form id="transaction-form">
+                    <label>
+                        Açıklama
+                        <input type="text" id="description" placeholder="Örn. Maaş, Market alışverişi" required />
+                    </label>
+                    <label>
+                        Tutar (₺)
+                        <input type="number" id="amount" step="0.01" min="0" placeholder="0.00" required />
+                    </label>
+                    <label>
+                        Tür
+                        <select id="transaction-type">
+                            <option value="income">Gelir</option>
+                            <option value="expense">Gider</option>
+                        </select>
+                    </label>
+                    <label>
+                        Kategori
+                        <select id="category">
+                            <option value="Maaş">Maaş</option>
+                            <option value="Yemek">Yemek</option>
+                            <option value="Ulaşım">Ulaşım</option>
+                            <option value="Kira">Kira</option>
+                            <option value="Eğlence">Eğlence</option>
+                            <option value="Diğer">Diğer</option>
+                        </select>
+                    </label>
+                    <label>
+                        Tarih
+                        <input type="date" id="date" />
+                    </label>
+                    <div style="display: flex; align-items: flex-end;">
+                        <button type="submit" style="width: 100%;">Kaydet</button>
+                    </div>
+                </form>
+                <div id="feedback" class="feedback" aria-live="polite"></div>
+            </section>
+
+            <section class="card">
+                <h2>Özet</h2>
+                <div class="summary">
+                    <article class="summary-card">
+                        <h3>Toplam Gelir</h3>
+                        <p id="total-income">₺0.00</p>
+                    </article>
+                    <article class="summary-card">
+                        <h3>Toplam Gider</h3>
+                        <p id="total-expense">₺0.00</p>
+                    </article>
+                    <article class="summary-card">
+                        <h3>Kalan Bakiye</h3>
+                        <p id="balance">₺0.00</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>İşlem Geçmişi</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Açıklama</th>
+                            <th>Kategori</th>
+                            <th>Tutar</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-body"></tbody>
+                </table>
+            </section>
+        </div>
     </main>
 
-    <py-script>
-from datetime import date
-from typing import List, Dict
-from pyscript import Element
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const DB_NAME = "budget-tracker";
+            const DB_VERSION = 1;
 
-Transaction = Dict[str, object]
-transactions: List[Transaction] = []
+            const transactions = [];
+            let db;
+            let currentUser = null;
+            let authMode = "login";
 
+            const form = document.getElementById("transaction-form");
+            const feedback = document.getElementById("feedback");
+            const transactionsBody = document.getElementById("transactions-body");
+            const totalIncomeEl = document.getElementById("total-income");
+            const totalExpenseEl = document.getElementById("total-expense");
+            const balanceEl = document.getElementById("balance");
+            const descriptionInput = document.getElementById("description");
+            const amountInput = document.getElementById("amount");
+            const categorySelect = document.getElementById("category");
+            const transactionTypeSelect = document.getElementById("transaction-type");
+            const dateInput = document.getElementById("date");
 
-def format_currency(value: float) -> str:
-    return f"₺{value:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+            const authCard = document.getElementById("auth-card");
+            const authForm = document.getElementById("auth-form");
+            const authUsernameInput = document.getElementById("auth-username");
+            const authPasswordInput = document.getElementById("auth-password");
+            const authFeedback = document.getElementById("auth-feedback");
+            const authSubmitButton = document.getElementById("auth-submit");
+            const authTitle = document.getElementById("auth-title");
+            const authTabs = document.querySelectorAll(".auth-tabs button");
 
+            const app = document.getElementById("app");
+            const userPanel = document.getElementById("user-panel");
+            const currentUsernameEl = document.getElementById("current-username");
+            const logoutBtn = document.getElementById("logout-btn");
 
-def show_feedback(message: str, kind: str) -> None:
-    feedback = Element("feedback")
-    feedback.element.className = f"feedback {kind}"
-    feedback.write(message)
+            const formatCurrency = (value) =>
+                new Intl.NumberFormat("tr-TR", {
+                    style: "currency",
+                    currency: "TRY",
+                    minimumFractionDigits: 2,
+                }).format(value);
 
+            const showFeedback = (message, kind) => {
+                feedback.textContent = message;
+                feedback.className = `feedback ${kind}`;
+            };
 
-def clear_feedback() -> None:
-    feedback = Element("feedback")
-    feedback.element.className = "feedback"
-    feedback.write("")
+            const clearFeedback = () => {
+                feedback.textContent = "";
+                feedback.className = "feedback";
+            };
 
+            const setAuthFeedback = (message, kind = "") => {
+                authFeedback.textContent = message;
+                authFeedback.className = kind ? `feedback ${kind}` : "feedback";
+            };
 
-def add_transaction(event=None) -> None:
-    description = Element("description").element.value.strip()
-    amount_text = Element("amount").element.value.strip()
-    category = Element("category").element.value.strip() or "Diğer"
-    transaction_type = Element("transaction-type").element.value
-    date_value = Element("date").element.value
+            const openDatabase = () =>
+                new Promise((resolve, reject) => {
+                    const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    if not description:
-        show_feedback("Lütfen açıklama girin.", "error")
-        return
+                    request.onerror = () => {
+                        reject(request.error || new Error("Veritabanı açılamadı"));
+                    };
 
-    try:
-        amount = float(amount_text)
-    except ValueError:
-        show_feedback("Lütfen geçerli bir tutar girin.", "error")
-        return
+                    request.onupgradeneeded = (event) => {
+                        const upgradeDb = event.target.result;
 
-    if amount <= 0:
-        show_feedback("Tutar 0'dan büyük olmalıdır.", "error")
-        return
+                        if (!upgradeDb.objectStoreNames.contains("users")) {
+                            upgradeDb.createObjectStore("users", { keyPath: "username" });
+                        }
 
-    signed_amount = amount if transaction_type == "income" else -amount
+                        if (!upgradeDb.objectStoreNames.contains("transactions")) {
+                            const transactionStore = upgradeDb.createObjectStore("transactions", {
+                                keyPath: "id",
+                                autoIncrement: true,
+                            });
+                            transactionStore.createIndex("byUsername", "username", { unique: false });
+                        } else {
+                            const transactionStore = event.target.transaction.objectStore("transactions");
+                            if (!transactionStore.indexNames.contains("byUsername")) {
+                                transactionStore.createIndex("byUsername", "username", { unique: false });
+                            }
+                        }
+                    };
 
-    transactions.append(
-        {
-            "description": description,
-            "amount": signed_amount,
-            "category": category,
-            "date": date_value or date.today().isoformat(),
-        }
-    )
+                    request.onsuccess = () => {
+                        resolve(request.result);
+                    };
+                });
 
-    Element("transaction-form").element.reset()
-    show_feedback("İşlem başarıyla eklendi!", "success")
-    render_transactions()
+            const getDb = async () => {
+                if (db) {
+                    return db;
+                }
+                db = await openDatabase();
+                return db;
+            };
 
+            const hashPassword = async (password) => {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(password);
+                const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+            };
 
-def remove_transaction(index: int, event=None) -> None:
-    try:
-        transactions.pop(index)
-        render_transactions()
-        show_feedback("İşlem silindi.", "success")
-    except IndexError:
-        show_feedback("İşlem bulunamadı.", "error")
+            const getUser = async (username) => {
+                const database = await getDb();
+                return new Promise((resolve, reject) => {
+                    const transaction = database.transaction("users", "readonly");
+                    const store = transaction.objectStore("users");
+                    const request = store.get(username);
 
+                    request.onsuccess = () => resolve(request.result || null);
+                    request.onerror = () => reject(request.error);
+                });
+            };
 
-def summarize_transactions() -> Dict[str, float]:
-    income = sum(t["amount"] for t in transactions if t["amount"] > 0)
-    expense = sum(t["amount"] for t in transactions if t["amount"] < 0)
-    balance = income + expense
-    return {"income": income, "expense": expense, "balance": balance}
+            const createUser = async (username, passwordHash) => {
+                const database = await getDb();
+                return new Promise((resolve, reject) => {
+                    const transaction = database.transaction("users", "readwrite");
+                    const store = transaction.objectStore("users");
+                    const request = store.add({ username, passwordHash });
 
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            };
 
-def render_transactions() -> None:
-    table_body = Element("transactions-body")
-    rows = []
-    for index, transaction in enumerate(transactions):
-        amount = transaction["amount"]
-        amount_class = "amount-income" if amount >= 0 else "amount-expense"
-        rows.append(
-            """
-            <tr>
-                <td>{date}</td>
-                <td>{description}</td>
-                <td>{category}</td>
-                <td class="{amount_class}">{amount}</td>
-                <td><button class="delete" py-click="remove_transaction({index})">Sil</button></td>
-            </tr>
-            """.format(
-                date=transaction["date"],
-                description=transaction["description"],
-                category=transaction["category"],
-                amount_class=amount_class,
-                amount=format_currency(amount),
-                index=index,
-            )
-        )
+            const getTransactionsForUser = async (username) => {
+                const database = await getDb();
+                return new Promise((resolve, reject) => {
+                    const transaction = database.transaction("transactions", "readonly");
+                    const store = transaction.objectStore("transactions");
+                    const index = store.index("byUsername");
+                    const request = index.getAll(IDBKeyRange.only(username));
 
-    table_body.element.innerHTML = "".join(rows) if rows else """
-        <tr>
-            <td colspan="5" style="text-align:center; color: var(--muted); padding: 2rem 0;">
-                Henüz işlem eklenmedi. İlk kaydınızı yaparak başlayın.
-            </td>
-        </tr>
-    """
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                });
+            };
 
-    summary = summarize_transactions()
-    Element("total-income").write(format_currency(summary["income"]))
-    Element("total-expense").write(format_currency(-summary["expense"]))
-    Element("balance").write(format_currency(summary["balance"]))
+            const addTransactionToDb = async (transactionData) => {
+                const database = await getDb();
+                return new Promise((resolve, reject) => {
+                    const transaction = database.transaction("transactions", "readwrite");
+                    const store = transaction.objectStore("transactions");
+                    const request = store.add(transactionData);
 
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            };
 
-render_transactions()
-clear_feedback()
-    </py-script>
+            const deleteTransactionFromDb = async (id) => {
+                const database = await getDb();
+                return new Promise((resolve, reject) => {
+                    const transaction = database.transaction("transactions", "readwrite");
+                    const store = transaction.objectStore("transactions");
+                    const request = store.delete(id);
+
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            };
+
+            const summarizeTransactions = () =>
+                transactions.reduce(
+                    (summary, transaction) => {
+                        if (transaction.amount >= 0) {
+                            summary.income += transaction.amount;
+                        } else {
+                            summary.expense += transaction.amount;
+                        }
+                        summary.balance += transaction.amount;
+                        return summary;
+                    },
+                    { income: 0, expense: 0, balance: 0 }
+                );
+
+            const renderTransactions = () => {
+                if (!currentUser) {
+                    transactionsBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align:center; color: var(--muted); padding: 2rem 0;">
+                                İşlemleri görüntülemek için giriş yapın.
+                            </td>
+                        </tr>
+                    `;
+                    totalIncomeEl.textContent = formatCurrency(0);
+                    totalExpenseEl.textContent = formatCurrency(0);
+                    balanceEl.textContent = formatCurrency(0);
+                    return;
+                }
+
+                if (transactions.length === 0) {
+                    transactionsBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align:center; color: var(--muted); padding: 2rem 0;">
+                                Henüz işlem eklenmedi. İlk kaydınızı yaparak başlayın.
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    transactionsBody.innerHTML = transactions
+                        .map((transaction) => {
+                            const amountClass = transaction.amount >= 0 ? "amount-income" : "amount-expense";
+                            return `
+                                <tr>
+                                    <td>${transaction.date}</td>
+                                    <td>${transaction.description}</td>
+                                    <td>${transaction.category}</td>
+                                    <td class="${amountClass}">${formatCurrency(transaction.amount)}</td>
+                                    <td><button class="delete" data-id="${transaction.id}">Sil</button></td>
+                                </tr>
+                            `;
+                        })
+                        .join("");
+                }
+
+                const summary = summarizeTransactions();
+                totalIncomeEl.textContent = formatCurrency(summary.income);
+                totalExpenseEl.textContent = formatCurrency(Math.abs(summary.expense));
+                balanceEl.textContent = formatCurrency(summary.balance);
+            };
+
+            const loadTransactions = async () => {
+                if (!currentUser) {
+                    return;
+                }
+                const userTransactions = await getTransactionsForUser(currentUser.username);
+                userTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+                transactions.splice(0, transactions.length, ...userTransactions);
+                renderTransactions();
+            };
+
+            const setAuthMode = (mode) => {
+                authMode = mode;
+                authTabs.forEach((tab) => {
+                    tab.classList.toggle("active", tab.dataset.mode === mode);
+                });
+                authSubmitButton.textContent = mode === "login" ? "Giriş Yap" : "Kayıt Ol";
+                authPasswordInput.setAttribute(
+                    "autocomplete",
+                    mode === "login" ? "current-password" : "new-password"
+                );
+                authTitle.textContent = mode === "login" ? "Kullanıcı Girişi" : "Yeni Kullanıcı Oluştur";
+                setAuthFeedback("");
+            };
+
+            const resetAppState = () => {
+                currentUser = null;
+                transactions.splice(0, transactions.length);
+                authForm.reset();
+                form.reset();
+                renderTransactions();
+                clearFeedback();
+            };
+
+            const handleRegister = async (username, password) => {
+                if (username.length < 3) {
+                    throw new Error("Kullanıcı adı en az 3 karakter olmalıdır.");
+                }
+
+                if (password.length < 6) {
+                    throw new Error("Şifre en az 6 karakter olmalıdır.");
+                }
+
+                const existingUser = await getUser(username);
+                if (existingUser) {
+                    throw new Error("Bu kullanıcı adı zaten kullanılıyor.");
+                }
+
+                const passwordHash = await hashPassword(password);
+                await createUser(username, passwordHash);
+            };
+
+            const handleLogin = async (username, password) => {
+                const user = await getUser(username);
+                if (!user) {
+                    throw new Error("Kullanıcı bulunamadı.");
+                }
+
+                const passwordHash = await hashPassword(password);
+                if (user.passwordHash !== passwordHash) {
+                    throw new Error("Şifre hatalı.");
+                }
+
+                currentUser = { username };
+                await loadTransactions();
+                authCard.hidden = true;
+                app.hidden = false;
+                userPanel.hidden = false;
+                currentUsernameEl.textContent = username;
+                clearFeedback();
+            };
+
+            authTabs.forEach((tab) => {
+                tab.addEventListener("click", () => {
+                    const mode = tab.dataset.mode;
+                    if (mode !== authMode) {
+                        setAuthMode(mode);
+                        authForm.reset();
+                    }
+                });
+            });
+
+            authForm.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                const username = authUsernameInput.value.trim();
+                const password = authPasswordInput.value;
+
+                if (!username || !password) {
+                    setAuthFeedback("Lütfen kullanıcı adı ve şifrenizi girin.", "error");
+                    return;
+                }
+
+                try {
+                    if (authMode === "register") {
+                        await handleRegister(username, password);
+                        setAuthMode("login");
+                        setAuthFeedback("Kayıt başarılı. Şimdi giriş yapabilirsiniz.", "success");
+                        authForm.reset();
+                    } else {
+                        await handleLogin(username, password);
+                        setAuthFeedback("");
+                        authForm.reset();
+                    }
+                } catch (error) {
+                    setAuthFeedback(error.message || "Bir hata oluştu.", "error");
+                }
+            });
+
+            logoutBtn.addEventListener("click", () => {
+                authCard.hidden = false;
+                app.hidden = true;
+                userPanel.hidden = true;
+                setAuthMode("login");
+                setAuthFeedback("Çıkış yaptınız.", "success");
+                resetAppState();
+            });
+
+            const addTransaction = async (event) => {
+                event.preventDefault();
+
+                if (!currentUser) {
+                    showFeedback("İşlem eklemek için lütfen giriş yapın.", "error");
+                    return;
+                }
+
+                const description = descriptionInput.value.trim();
+                const amountValue = amountInput.value.trim();
+                const category = categorySelect.value || "Diğer";
+                const transactionType = transactionTypeSelect.value;
+                const dateValue = dateInput.value || new Date().toISOString().split("T")[0];
+
+                if (!description) {
+                    showFeedback("Lütfen açıklama girin.", "error");
+                    return;
+                }
+
+                const normalizedAmountValue = amountValue.replace(",", ".");
+                const amount = Number(normalizedAmountValue);
+
+                if (!normalizedAmountValue || Number.isNaN(amount)) {
+                    showFeedback("Lütfen geçerli bir tutar girin.", "error");
+                    return;
+                }
+
+                if (amount <= 0) {
+                    showFeedback("Tutar 0'dan büyük olmalıdır.", "error");
+                    return;
+                }
+
+                const signedAmount = transactionType === "income" ? amount : -amount;
+
+                try {
+                    const id = await addTransactionToDb({
+                        username: currentUser.username,
+                        description,
+                        amount: signedAmount,
+                        category,
+                        date: dateValue,
+                    });
+
+                    transactions.unshift({
+                        id,
+                        username: currentUser.username,
+                        description,
+                        amount: signedAmount,
+                        category,
+                        date: dateValue,
+                    });
+
+                    transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    renderTransactions();
+                    form.reset();
+                    showFeedback("İşlem başarıyla eklendi!", "success");
+                } catch (error) {
+                    showFeedback("İşlem kaydedilirken bir hata oluştu.", "error");
+                    console.error(error);
+                }
+            };
+
+            form.addEventListener("submit", addTransaction);
+
+            transactionsBody.addEventListener("click", async (event) => {
+                const target = event.target;
+
+                if (target instanceof HTMLElement && target.matches("button.delete")) {
+                    if (!currentUser) {
+                        showFeedback("Önce giriş yapmalısınız.", "error");
+                        return;
+                    }
+
+                    const idValue = target.getAttribute("data-id");
+                    const transactionId = Number(idValue);
+
+                    if (!idValue || Number.isNaN(transactionId)) {
+                        showFeedback("İşlem bulunamadı.", "error");
+                        return;
+                    }
+
+                    try {
+                        await deleteTransactionFromDb(transactionId);
+                        const index = transactions.findIndex((transaction) => transaction.id === transactionId);
+                        if (index !== -1) {
+                            transactions.splice(index, 1);
+                        }
+                        renderTransactions();
+                        showFeedback("İşlem silindi.", "success");
+                    } catch (error) {
+                        showFeedback("İşlem silinirken bir hata oluştu.", "error");
+                        console.error(error);
+                    }
+                }
+            });
+
+            renderTransactions();
+        });
+    </script>
 </body>
 </html>
