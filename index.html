@@ -200,7 +200,6 @@
             }
         }
     </style>
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
 </head>
 <body>
     <header>
@@ -211,7 +210,7 @@
     <main>
         <section class="card">
             <h2>Yeni İşlem Ekle</h2>
-            <form id="transaction-form" py-submit="add_transaction">
+            <form id="transaction-form">
                 <label>
                     Açıklama
                     <input type="text" id="description" placeholder="Örn. Maaş, Market alışverişi" required />
@@ -284,125 +283,151 @@
         </section>
     </main>
 
-    <py-script>
-from datetime import date
-from typing import List, Dict
-from pyscript import Element
 
-Transaction = Dict[str, object]
-transactions: List[Transaction] = []
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const transactions = [];
 
+            const form = document.getElementById("transaction-form");
+            const feedback = document.getElementById("feedback");
+            const transactionsBody = document.getElementById("transactions-body");
+            const totalIncomeEl = document.getElementById("total-income");
+            const totalExpenseEl = document.getElementById("total-expense");
+            const balanceEl = document.getElementById("balance");
 
-def format_currency(value: float) -> str:
-    return f"₺{value:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+            const descriptionInput = document.getElementById("description");
+            const amountInput = document.getElementById("amount");
+            const categorySelect = document.getElementById("category");
+            const transactionTypeSelect = document.getElementById("transaction-type");
+            const dateInput = document.getElementById("date");
 
+            const formatCurrency = (value) =>
+                new Intl.NumberFormat("tr-TR", {
+                    style: "currency",
+                    currency: "TRY",
+                    minimumFractionDigits: 2,
+                }).format(value);
 
-def show_feedback(message: str, kind: str) -> None:
-    feedback = Element("feedback")
-    feedback.element.className = f"feedback {kind}"
-    feedback.write(message)
+            const showFeedback = (message, kind) => {
+                feedback.textContent = message;
+                feedback.className = `feedback ${kind}`;
+            };
 
+            const clearFeedback = () => {
+                feedback.textContent = "";
+                feedback.className = "feedback";
+            };
 
-def clear_feedback() -> None:
-    feedback = Element("feedback")
-    feedback.element.className = "feedback"
-    feedback.write("")
+            const summarizeTransactions = () =>
+                transactions.reduce(
+                    (summary, transaction) => {
+                        if (transaction.amount >= 0) {
+                            summary.income += transaction.amount;
+                        } else {
+                            summary.expense += transaction.amount;
+                        }
+                        summary.balance += transaction.amount;
+                        return summary;
+                    },
+                    { income: 0, expense: 0, balance: 0 }
+                );
 
+            const renderTransactions = () => {
+                if (transactions.length === 0) {
+                    transactionsBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align:center; color: var(--muted); padding: 2rem 0;">
+                                Henüz işlem eklenmedi. İlk kaydınızı yaparak başlayın.
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    transactionsBody.innerHTML = transactions
+                        .map((transaction, index) => {
+                            const amountClass = transaction.amount >= 0 ? "amount-income" : "amount-expense";
+                            return `
+                                <tr>
+                                    <td>${transaction.date}</td>
+                                    <td>${transaction.description}</td>
+                                    <td>${transaction.category}</td>
+                                    <td class="${amountClass}">${formatCurrency(transaction.amount)}</td>
+                                    <td><button class="delete" data-index="${index}">Sil</button></td>
+                                </tr>
+                            `;
+                        })
+                        .join("");
+                }
 
-def add_transaction(event=None) -> None:
-    description = Element("description").element.value.strip()
-    amount_text = Element("amount").element.value.strip()
-    category = Element("category").element.value.strip() or "Diğer"
-    transaction_type = Element("transaction-type").element.value
-    date_value = Element("date").element.value
+                const summary = summarizeTransactions();
+                totalIncomeEl.textContent = formatCurrency(summary.income);
+                totalExpenseEl.textContent = formatCurrency(Math.abs(summary.expense));
+                balanceEl.textContent = formatCurrency(summary.balance);
+            };
 
-    if not description:
-        show_feedback("Lütfen açıklama girin.", "error")
-        return
+            const addTransaction = (event) => {
+                event.preventDefault();
 
-    try:
-        amount = float(amount_text)
-    except ValueError:
-        show_feedback("Lütfen geçerli bir tutar girin.", "error")
-        return
+                const description = descriptionInput.value.trim();
+                const amountValue = amountInput.value.trim();
+                const category = categorySelect.value || "Diğer";
+                const transactionType = transactionTypeSelect.value;
+                const dateValue = dateInput.value || new Date().toISOString().split("T")[0];
 
-    if amount <= 0:
-        show_feedback("Tutar 0'dan büyük olmalıdır.", "error")
-        return
+                if (!description) {
+                    showFeedback("Lütfen açıklama girin.", "error");
+                    return;
+                }
 
-    signed_amount = amount if transaction_type == "income" else -amount
+                const normalizedAmountValue = amountValue.replace(",", ".");
+                const amount = Number(normalizedAmountValue);
 
-    transactions.append(
-        {
-            "description": description,
-            "amount": signed_amount,
-            "category": category,
-            "date": date_value or date.today().isoformat(),
-        }
-    )
+                if (!normalizedAmountValue || Number.isNaN(amount)) {
+                    showFeedback("Lütfen geçerli bir tutar girin.", "error");
+                    return;
+                }
 
-    Element("transaction-form").element.reset()
-    show_feedback("İşlem başarıyla eklendi!", "success")
-    render_transactions()
+                if (amount <= 0) {
+                    showFeedback("Tutar 0'dan büyük olmalıdır.", "error");
+                    return;
+                }
 
+                const signedAmount = transactionType === "income" ? amount : -amount;
 
-def remove_transaction(index: int, event=None) -> None:
-    try:
-        transactions.pop(index)
-        render_transactions()
-        show_feedback("İşlem silindi.", "success")
-    except IndexError:
-        show_feedback("İşlem bulunamadı.", "error")
+                transactions.push({
+                    description,
+                    amount: signedAmount,
+                    category,
+                    date: dateValue,
+                });
 
+                form.reset();
+                showFeedback("İşlem başarıyla eklendi!", "success");
+                renderTransactions();
+            };
 
-def summarize_transactions() -> Dict[str, float]:
-    income = sum(t["amount"] for t in transactions if t["amount"] > 0)
-    expense = sum(t["amount"] for t in transactions if t["amount"] < 0)
-    balance = income + expense
-    return {"income": income, "expense": expense, "balance": balance}
+            form.addEventListener("submit", addTransaction);
 
+            transactionsBody.addEventListener("click", (event) => {
+                const target = event.target;
 
-def render_transactions() -> None:
-    table_body = Element("transactions-body")
-    rows = []
-    for index, transaction in enumerate(transactions):
-        amount = transaction["amount"]
-        amount_class = "amount-income" if amount >= 0 else "amount-expense"
-        rows.append(
-            """
-            <tr>
-                <td>{date}</td>
-                <td>{description}</td>
-                <td>{category}</td>
-                <td class="{amount_class}">{amount}</td>
-                <td><button class="delete" py-click="remove_transaction({index})">Sil</button></td>
-            </tr>
-            """.format(
-                date=transaction["date"],
-                description=transaction["description"],
-                category=transaction["category"],
-                amount_class=amount_class,
-                amount=format_currency(amount),
-                index=index,
-            )
-        )
+                if (target instanceof HTMLElement && target.matches("button.delete")) {
+                    const index = Number(target.getAttribute("data-index"));
 
-    table_body.element.innerHTML = "".join(rows) if rows else """
-        <tr>
-            <td colspan="5" style="text-align:center; color: var(--muted); padding: 2rem 0;">
-                Henüz işlem eklenmedi. İlk kaydınızı yaparak başlayın.
-            </td>
-        </tr>
-    """
+                    if (Number.isNaN(index)) {
+                        showFeedback("İşlem bulunamadı.", "error");
+                        return;
+                    }
 
-    summary = summarize_transactions()
-    Element("total-income").write(format_currency(summary["income"]))
-    Element("total-expense").write(format_currency(-summary["expense"]))
-    Element("balance").write(format_currency(summary["balance"]))
+                    transactions.splice(index, 1);
+                    renderTransactions();
+                    showFeedback("İşlem silindi.", "success");
+                }
+            });
 
+            renderTransactions();
+            clearFeedback();
+        });
+    </script>
 
-render_transactions()
-clear_feedback()
-    </py-script>
 </body>
 </html>
